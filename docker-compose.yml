@@ -1,0 +1,81 @@
+version: "3"
+services:
+
+  #Nginx Service
+  nginx:
+    image: nginx:alpine
+    container_name: ${APP_NAME}_nginx
+    restart: unless-stopped
+    tty: true
+    environment:
+      - VIRTUAL_PORT=80
+      - VIRTUAL_HOST=baltic-test.local
+    ports:
+      - "80:80"
+    links:
+      - app
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/conf.d/app.conf:/etc/nginx/conf.d/default.conf:rw
+      - ./docker/logs/nginx:/var/logs/nginx:rw
+    networks:
+      - laravel
+
+
+
+  #PHP Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${APP_NAME}_php
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: app
+      SERVICE_TAGS: dev
+    links:
+#      - postgres
+      - redis
+    volumes:
+      - ./:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - laravel
+
+
+
+#  #Postgres Service
+  postgres:
+    image: postgres:13-alpine
+    container_name: ${APP_NAME}_postgres
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_DATABASE}
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    networks:
+      - laravel
+
+
+
+  #Redis Service
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    container_name: ${APP_NAME}_redis
+    networks:
+      - laravel
+
+
+#Docker Networks
+networks:
+  laravel:
+    driver: bridge
+
+
